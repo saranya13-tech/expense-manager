@@ -1,11 +1,15 @@
 {% extends "tracker/base.html" %}
+{% block title %}Sign up{% endblock %}
 {% block content %}
-<div class="card auth">
-  <h2 style="margin-top:0">Create account</h2>
-  <form method="post">
-    {% include "registration/_form.html" %}
-    <button type="submit" style="width:100%">Register</button>
-  </form>
-  <p class="muted">Already have an account? <a href="{% url 'login' %}">Log in</a></p>
+<div class="auth">
+  <div class="card">
+    <h1>Create your account</h1>
+    <p class="sub muted">Track balance, income and expenses across separate books.</p>
+    <form method="post">
+      {% include "registration/_form.html" %}
+      <button type="submit" class="btn btn-block">Create account</button>
+    </form>
+  </div>
+  <p class="foot muted">Already have an account? <a href="{% url 'login' %}">Log in</a></p>
 </div>
 {% endblock %}

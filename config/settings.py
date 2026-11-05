@@ -126,11 +126,13 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STORAGES = {
     'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
-    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+    # Hashed + compressed files in production; plain storage for dev and tests (no collectstatic needed).
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage' if DEBUG
+                    else 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
 }
 
 LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'dashboard'
+LOGIN_REDIRECT_URL = 'book_list'
 LOGOUT_REDIRECT_URL = 'login'
 
 if not DEBUG:

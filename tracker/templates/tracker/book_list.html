@@ -1,0 +1,50 @@
+{% extends "tracker/base.html" %}
+{% load money %}
+{% block title %}My books{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <h1>My books</h1>
+    <div class="sub muted">Each book keeps its own balance, income and expenses.</div>
+  </div>
+  {% if books %}<button class="btn" type="button" onclick="document.getElementById('new-book').hidden=false;document.getElementById('id_name').focus()">+ New book</button>{% endif %}
+</div>
+
+<div class="card" id="new-book" {% if not show_form %}hidden{% endif %}>
+  <div class="card-head"><h2>{% if books %}Create a new book{% else %}Create your first book{% endif %}</h2></div>
+  <form method="post">
+    {% csrf_token %}
+    <div class="row-2" style="grid-template-columns: 1fr 120px">
+      {% include "tracker/_field.html" with field=form.name %}
+      {% include "tracker/_field.html" with field=form.currency %}
+    </div>
+    <button class="btn" type="submit">Create book</button>
+    {% if books %}<button class="btn btn-ghost" type="button" onclick="document.getElementById('new-book').hidden=true">Cancel</button>{% endif %}
+  </form>
+</div>
+
+{% if books %}
+<div class="books">
+  {% for b in books %}
+  <a class="book-card" href="{% url 'book_detail' b.pk %}">
+    <div class="top">
+      <span class="book-icon">{{ b.name|first }}</span>
+      <div style="min-width:0">
+        <div class="name">{{ b.name }}</div>
+        <div class="muted small">{{ b.entry_count }} entr{{ b.entry_count|pluralize:"y,ies" }}</div>
+      </div>
+    </div>
+    <div class="muted small">Balance</div>
+    <div class="balance num {% if b.balance < 0 %}red{% endif %}">{{ b.balance|money:b.currency }}</div>
+    <div class="split">
+      <span class="green num">↑ {{ b.income|money:b.currency }}</span>
+      <span class="red num">↓ {{ b.expense|money:b.currency }}</span>
+    </div>
+  </a>
+  {% endfor %}
+  <a class="book-card new" href="#new-book" onclick="document.getElementById('new-book').hidden=false;document.getElementById('id_name').focus();return false">
+    <div><div class="plus">+</div>New book</div>
+  </a>
+</div>
+{% endif %}
+{% endblock %}

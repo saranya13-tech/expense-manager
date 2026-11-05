@@ -1,0 +1,15 @@
+{% csrf_token %}
+<div class="field">
+  <span class="label">Type</span>
+  <div class="segmented">
+    {% for radio in form.kind %}{{ radio.tag }}<label for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>{% endfor %}
+  </div>
+  {{ form.kind.errors }}
+</div>
+<div class="field">
+  <label for="{{ form.amount.id_for_label }}">Amount</label>
+  <div class="amount-wrap"><span class="prefix">{{ book.currency }}</span>{{ form.amount }}</div>
+  {{ form.amount.errors }}
+</div>
+{% include "tracker/_field.html" with field=form.remark %}
+{% include "tracker/_field.html" with field=form.date %}

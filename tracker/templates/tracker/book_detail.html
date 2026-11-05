@@ -1,0 +1,111 @@
+{% extends "tracker/base.html" %}
+{% load money %}
+{% block title %}{{ book.name }}{% endblock %}
+{% block nav_extra %}
+<details class="switcher">
+  <summary class="btn btn-ghost btn-sm">📒 <span class="switch-text">Switch book</span> ▾</summary>
+  <div class="menu">
+    {% for b in books %}
+      <a href="{% url 'book_detail' b.pk %}" class="{% if b.pk == book.pk %}active{% endif %}"><span class="book-icon">{{ b.name|first }}</span>{{ b.name }}</a>
+    {% endfor %}
+    <hr><a href="{% url 'book_list' %}">All books</a>
+  </div>
+</details>
+{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="breadcrumb"><a href="{% url 'book_list' %}">My books</a> / {{ book.name }}</div>
+    <h1>{{ book.name }}</h1>
+  </div>
+  <a class="btn btn-ghost btn-sm" href="{% url 'book_edit' book.pk %}">⚙ Book settings</a>
+</div>
+
+<div class="stats">
+  <div class="stat hero {% if balance < 0 %}negative{% endif %}">
+    <p class="label">Current balance</p>
+    <div class="value num">{{ balance|money:book.currency }}</div>
+  </div>
+  <div class="stat"><p class="label">Balance added</p><div class="value num blue">{{ totals.BALANCE|money:book.currency }}</div></div>
+  <div class="stat"><p class="label">Total income</p><div class="value num green">{{ totals.INCOME|money:book.currency }}</div></div>
+  <div class="stat"><p class="label">Total expense</p><div class="value num red">{{ totals.EXPENSE|money:book.currency }}</div></div>
+</div>
+
+<div class="grid-2">
+  <div class="card sticky">
+    <div class="card-head"><h2>Add entry</h2></div>
+    <form method="post" autocomplete="off">
+      {% include "tracker/_entry_form.html" %}
+      <button class="btn btn-block" type="submit">Add entry</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-head" style="margin-bottom:12px">
+      <div class="month-nav">
+        <a class="icon-btn" href="?month={{ prev_month }}" title="Previous month">‹</a>
+        <span class="label">{{ month|date:"F Y" }}</span>
+        <a class="icon-btn" href="?month={{ next_month }}" title="Next month">›</a>
+      </div>
+      {% if not is_current_month %}<a class="btn btn-ghost btn-sm" href="?">Today</a>{% endif %}
+      <form class="search" method="get">
+        <input type="hidden" name="month" value="{{ month_value }}">
+        <input type="search" name="q" value="{{ query }}" placeholder="Search remarks…">
+      </form>
+    </div>
+
+    <div class="month-summary">
+      <div><div class="k">Money in</div><div class="v num green">{{ month_in|money:book.currency }}</div></div>
+      <div><div class="k">Expense</div><div class="v num red">{{ month_totals.EXPENSE|money:book.currency }}</div></div>
+      <div><div class="k">Net</div><div class="v num {% if month_net < 0 %}red{% endif %}">{{ month_net|money:book.currency }}</div></div>
+      <div><div class="k">Balance added</div><div class="v num blue">{{ month_totals.BALANCE|money:book.currency }}</div></div>
+    </div>
+
+    {% for day in days %}
+    <section class="day">
+      <div class="day-head">
+        <div class="date">{{ day.date|date:"d M Y" }} <span class="weekday">· {{ day.date|date:"l" }}</span></div>
+        <div class="totals">
+          {% if day.in %}<span class="green num">+{{ day.in|money:book.currency }}</span>{% endif %}
+          {% if day.out %}<span class="red num">-{{ day.out|money:book.currency }}</span>{% endif %}
+          <span class="muted num">Closing {{ day.closing|money:book.currency }}</span>
+        </div>
+      </div>
+      {% for t in day.items %}
+      <div class="entry">
+        <span class="entry-icon {{ t.kind }}">{% if t.kind == 'EXPENSE' %}↓{% elif t.kind == 'INCOME' %}↑{% else %}+{% endif %}</span>
+        <div class="entry-main">
+          <div class="entry-title">{{ t.remark|default:t.get_kind_display }}</div>
+          <div class="entry-sub"><span class="pill {{ t.kind }}">{{ t.get_kind_display }}</span></div>
+        </div>
+        <div class="entry-amount">
+          <div class="amt num {% if t.kind == 'EXPENSE' %}red{% else %}green{% endif %}">{% if t.kind == 'EXPENSE' %}-{% else %}+{% endif %}{{ t.amount|money:book.currency }}</div>
+          <div class="after num">Bal {{ t.running|money:book.currency }}</div>
+        </div>
+        <div class="entry-actions">
+          <a class="icon-btn" href="{% url 'entry_edit' t.pk %}" title="Edit">✎</a>
+          <form method="post" action="{% url 'entry_delete' t.pk %}" onsubmit="return confirm('Delete this entry?')">
+            {% csrf_token %}<button class="icon-btn danger" type="submit" title="Delete">🗑</button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
+    </section>
+    {% empty %}
+    <div class="empty">
+      {% if query %}
+        <div class="big">🔍</div><h3>No matches</h3><p>No entries in {{ month|date:"F" }} match “{{ query }}”. <a href="?month={{ month_value }}">Clear search</a></p>
+      {% elif has_entries %}
+        <div class="big">🗓️</div><h3>Nothing in {{ month|date:"F Y" }}</h3><p>Use ‹ › to see other months, or add an entry.</p>
+      {% else %}
+        <div class="big">📒</div><h3>This book is empty</h3><p>Start by choosing <b>Add Balance</b> and entering the money you have now.</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+<script>
+  // Close the book switcher when clicking elsewhere.
+  document.addEventListener('click', e => document.querySelectorAll('details.switcher[open]').forEach(d => { if (!d.contains(e.target)) d.open = false; }));
+</script>
+{% endblock %}
