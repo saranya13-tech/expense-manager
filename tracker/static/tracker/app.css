@@ -434,3 +434,6 @@ html.standalone .topbar { padding-top: max(env(safe-area-inset-top), 6px); }
   .entry-link::after { content: "›"; color: #c4c8d0; font-size: 22px; margin-left: 2px; }
   .pill { white-space: nowrap; }
 }
+
+/* Logo image in the top bar */
+img.brand-mark { display: block; width: 32px; height: 32px; border-radius: 9px; object-fit: cover; background: none; box-shadow: 0 2px 6px rgba(79, 70, 229, .3); }
