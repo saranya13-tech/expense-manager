@@ -1,0 +1,162 @@
+{% extends "tracker/base.html" %}
+{% load money %}
+{% block title %}Insights · {{ book.name }}{% endblock %}
+{% block topbar_left %}
+  {% include "tracker/_back.html" with back_label=book.name %}
+  <span class="topbar-title">Insights</span>
+{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="breadcrumb hide-mobile"><a href="{% url 'book_list' %}">My books</a> / <a href="{{ back_url }}">{{ book.name }}</a> / Insights</div>
+    <h1>📊 Insights</h1>
+    <div class="sub muted">Expenses only. Gave / Got and Add Balance aren't counted as spending.</div>
+  </div>
+</div>
+
+{# One filter row scopes everything below #}
+<div class="insights-filter">
+  <div class="month-nav">
+    <a class="icon-btn" href="?month={{ prev_month }}" aria-label="Previous month">‹</a>
+    <span class="label">{{ month|date:"F Y" }}</span>
+    <a class="icon-btn" href="?month={{ next_month }}" aria-label="Next month">›</a>
+  </div>
+  {% if not is_current_month %}<a class="btn btn-ghost btn-sm" href="?">This month</a>{% endif %}
+</div>
+
+<div class="stats insight-stats">
+  <div class="stat hero">
+    <p class="label">Spent in {{ month|date:"F" }}</p>
+    <div class="value">{{ ins.spent|money:book.currency }}</div>
+    <div class="hero-sub">{{ ins.entry_count }} expense{{ ins.entry_count|pluralize }}</div>
+  </div>
+  <div class="stat">
+    <p class="label">{{ ins.prev_month|date:"F" }}</p>
+    <div class="value">{{ ins.prev_spent|money:book.currency }}</div>
+  </div>
+  <div class="stat">
+    <p class="label">Change</p>
+    {% if ins.change > 0 %}
+      <div class="value red">↑ {{ ins.change|money:book.currency }}</div>
+      <div class="delta-note">{% if ins.change_pct is not None %}{{ ins.change_pct|floatformat:0 }}% {% endif %}more</div>
+    {% elif ins.change < 0 %}
+      <div class="value green">↓ {{ ins.change|money:book.currency|slice:"1:" }}</div>
+      <div class="delta-note">{% if ins.change_pct is not None %}{{ ins.change_pct|floatformat:0|slice:"1:" }}% {% endif %}less</div>
+    {% else %}
+      <div class="value">—</div><div class="delta-note">no change</div>
+    {% endif %}
+  </div>
+  <div class="stat">
+    <p class="label">Daily average</p>
+    <div class="value">{{ ins.daily_avg|money:book.currency }}</div>
+    <div class="delta-note">over {{ ins.days_counted }} day{{ ins.days_counted|pluralize }}</div>
+  </div>
+</div>
+
+<div class="insights-grid">
+  <section class="card">
+    <div class="card-head"><h2>Spending, last 6 months</h2></div>
+    <div class="vbars" role="img" aria-label="Spending per month for the last 6 months">
+      {% for p in ins.trend %}
+      <a class="vbar-col {% if p.selected %}selected{% endif %}" href="?month={{ p.month|date:'Y-m' }}"
+         data-tip="{{ p.month|date:'F Y' }}: {{ p.amount|money:book.currency }}" aria-label="{{ p.month|date:'F Y' }}: {{ p.amount|money:book.currency }}">
+        <span class="vbar-plot">
+          {% if p.selected %}<span class="vbar-label">{{ p.amount|money:book.currency }}</span>{% endif %}
+          <span class="vbar" style="height: {% if p.amount %}max(4px, {{ p.height|floatformat:'2u' }}%){% else %}0{% endif %}"></span>
+        </span>
+        <span class="vbar-x">{{ p.month|date:"M" }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    <details class="table-view">
+      <summary>Show as table</summary>
+      <table>
+        <thead><tr><th>Month</th><th class="r">Spent</th></tr></thead>
+        <tbody>{% for p in ins.trend %}<tr><td>{{ p.month|date:"F Y" }}</td><td class="r num">{{ p.amount|money:book.currency }}</td></tr>{% endfor %}</tbody>
+      </table>
+    </details>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Where you spent more</h2><span class="muted small">vs {{ ins.prev_month|date:"F" }}</span></div>
+    {% if ins.spent_more %}
+      <ul class="more-list">
+        {% for r in ins.spent_more|slice:":5" %}
+        <li>
+          <span class="cat-emoji" aria-hidden="true">{{ r.emoji }}</span>
+          <span class="more-main"><b>{{ r.label }}</b><span class="muted small">{{ r.prev_amount|money:book.currency }} → {{ r.amount|money:book.currency }}</span></span>
+          <span class="more-delta red"><b>↑ {{ r.change|money:book.currency }}</b><small>{% if r.change_pct is not None %}{{ r.change_pct|floatformat:0 }}% more{% else %}new this month{% endif %}</small></span>
+        </li>
+        {% endfor %}
+      </ul>
+    {% elif ins.spent %}
+      <div class="empty compact"><div class="big">🎉</div><p>You didn't spend more than {{ ins.prev_month|date:"F" }} in any category.</p></div>
+    {% else %}
+      <div class="empty compact"><p>No expenses in {{ month|date:"F Y" }} yet.</p></div>
+    {% endif %}
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-head"><h2>By category</h2><span class="muted small">{{ month|date:"F Y" }}</span></div>
+  {% if ins.categories %}
+  <table class="cat-table">
+    <thead class="hide-mobile"><tr><th>Category</th><th class="bar-col"></th><th class="r">Spent</th><th class="r">Share</th><th class="r">vs {{ ins.prev_month|date:"M" }}</th></tr></thead>
+    <tbody>
+      {% for r in ins.categories %}
+      <tr>
+        <td class="cat-name"><span class="cat-emoji" aria-hidden="true">{{ r.emoji }}</span>{{ r.label }}</td>
+        <td class="bar-col"><span class="hbar-track" data-tip="{{ r.label }}: {{ r.amount|money:book.currency }} ({{ r.share|floatformat:0 }}%)"><span class="hbar" style="width: max(4px, {{ r.bar|floatformat:'2u' }}%)"></span></span></td>
+        <td class="r num"><b>{{ r.amount|money:book.currency }}</b></td>
+        <td class="r num muted">{{ r.share|floatformat:0 }}%</td>
+        <td class="r num">
+          {% if r.change > 0 %}<span class="red">↑ {{ r.change|money:book.currency }}</span>
+          {% elif r.change < 0 %}<span class="green">↓ {{ r.change|money:book.currency|slice:"1:" }}</span>
+          {% else %}<span class="muted">same</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <div class="empty compact"><div class="big">🧾</div><p>No expenses in {{ month|date:"F Y" }}. Add expenses with a category to see where your money goes.</p></div>
+  {% endif %}
+</section>
+
+{% if ins.top_expenses %}
+<section class="card">
+  <div class="card-head"><h2>Biggest expenses</h2><span class="muted small">{{ month|date:"F Y" }}</span></div>
+  <ul class="more-list">
+    {% for t in ins.top_expenses %}
+    <li>
+      <span class="cat-emoji" aria-hidden="true">{{ t.category_emoji }}</span>
+      <a class="more-main" href="{% url 'entry_edit' t.pk %}"><b>{{ t.remark|default:t.get_category_display }}</b><span class="muted small">{{ t.get_category_display }} · {{ t.date|date:"d M" }}</span></a>
+      <span class="more-delta"><b class="num">{{ t.amount|money:book.currency }}</b></span>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+<script>
+  // Tap/hover tooltips for chart marks (values are also in the table view).
+  (() => {
+    const tip = document.createElement('div');
+    tip.className = 'chart-tip'; tip.hidden = true; tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+    const show = (el) => {
+      tip.textContent = el.dataset.tip; tip.hidden = false;
+      const r = el.getBoundingClientRect(), t = tip.getBoundingClientRect();
+      const x = Math.min(Math.max(8, r.left + r.width / 2 - t.width / 2), innerWidth - t.width - 8);
+      tip.style.left = x + 'px'; tip.style.top = (r.top + scrollY - t.height - 8) + 'px';
+    };
+    document.querySelectorAll('[data-tip]').forEach(el => {
+      el.addEventListener('mouseenter', () => show(el));
+      el.addEventListener('focus', () => show(el));
+      el.addEventListener('mouseleave', () => tip.hidden = true);
+      el.addEventListener('blur', () => tip.hidden = true);
+    });
+  })();
+</script>
+{% endblock %}

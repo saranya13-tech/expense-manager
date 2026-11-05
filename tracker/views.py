@@ -15,7 +15,7 @@ from django.views.decorators.http import require_POST
 from .forms import BookForm, TransactionForm
 from .models import Book, Transaction
 from .services import (
-    books_with_totals, build_ledger, cleanup_months, cleanup_preview, clear_before, parse_month,
+    books_with_totals, build_insights, build_ledger, cleanup_months, cleanup_preview, clear_before, parse_month,
     people_summary, shift_month,
 )
 
@@ -101,6 +101,24 @@ def _parse_keep_from(value):
         return date(y, m, 1)
     except ValueError:
         return None
+
+
+@login_required
+def book_insights(request, pk):
+    book = get_object_or_404(Book, pk=pk, user=request.user)
+    today = timezone.localdate()
+    month = parse_month(request.GET.get("month"), today)
+    ins = build_insights(book, month, today)
+    return render(request, "tracker/insights.html", {
+        "book": book,
+        "books": request.user.books.all(),
+        "ins": ins,
+        "month": month,
+        "prev_month": shift_month(month, -1).strftime("%Y-%m"),
+        "next_month": shift_month(month, 1).strftime("%Y-%m"),
+        "is_current_month": month == today.replace(day=1),
+        "back_url": f"{reverse('book_detail', args=[book.pk])}?month={month:%Y-%m}",
+    })
 
 
 @login_required

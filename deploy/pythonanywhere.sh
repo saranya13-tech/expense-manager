@@ -24,8 +24,10 @@ if [ -d "$APP/.git" ]; then git -C "$APP" pull --ff-only; else git clone "$REPO"
 
 echo "==> Virtualenv + dependencies"
 [ -x "$VENV/bin/python" ] || "$PY" -m venv "$VENV"
-"$VENV/bin/pip" install -q --upgrade pip
-"$VENV/bin/pip" install -q -r "$APP/requirements.txt"
+"$VENV/bin/pip" install -q --no-cache-dir --upgrade pip
+"$VENV/bin/pip" install -q --no-cache-dir -r "$APP/requirements.txt"
+# Packages only needed on Render (Postgres driver, gunicorn): remove them here to save disk space.
+"$VENV/bin/pip" uninstall -q -y psycopg psycopg-binary gunicorn 2>/dev/null || true
 
 [ -s "$SECRET_FILE" ] || { "$VENV/bin/python" -c "import secrets; print(secrets.token_urlsafe(50))" > "$SECRET_FILE"; chmod 600 "$SECRET_FILE"; }
 export DJANGO_SETTINGS_MODULE=config.settings DEBUG=False ALLOWED_HOSTS="$DOMAIN" SECRET_KEY="$(cat "$SECRET_FILE")"

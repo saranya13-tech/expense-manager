@@ -351,3 +351,62 @@ class ThemeTests(TestCase):
         self.assertContains(r, 'data-accent-choice="emerald"')
         html = r.content.decode()
         self.assertLess(html.index("spendly-theme"), html.index("app.css"))  # applied before CSS loads
+
+
+class InsightsTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("i", password="pw-12345678")
+        self.client.force_login(self.user)
+        self.book = Book.objects.create(user=self.user, name="Home")
+
+    def exp(self, amount, d, cat="OTHER", remark=""):
+        return Transaction.objects.create(book=self.book, kind="EXPENSE", amount=Decimal(amount), date=d, category=cat, remark=remark)
+
+    def test_category_saved_only_for_expenses(self):
+        self.client.post(f"/books/{self.book.pk}/", {"kind": "EXPENSE", "amount": "10", "date": "2026-11-01", "category": "FOOD"})
+        self.client.post(f"/books/{self.book.pk}/", {"kind": "INCOME", "amount": "10", "date": "2026-11-01", "category": "FOOD"})
+        self.client.post(f"/books/{self.book.pk}/", {"kind": "EXPENSE", "amount": "5", "date": "2026-11-01"})
+        self.assertEqual(list(Transaction.objects.order_by("id").values_list("category", flat=True)), ["FOOD", "OTHER", "OTHER"])
+
+    def test_month_comparison_and_where_you_spent_more(self):
+        # October
+        self.exp("1000", "2026-10-05", "FOOD")
+        self.exp("3000", "2026-10-06", "RENT")
+        self.exp("500", "2026-10-07", "TRANSPORT")
+        # November
+        self.exp("1500", "2026-11-02", "FOOD", "Swiggy")
+        self.exp("3000", "2026-11-03", "RENT", "Rent")
+        self.exp("200", "2026-11-04", "TRANSPORT")
+        self.exp("700", "2026-11-04", "SHOPPING", "Shoes")
+        # Not spending: income / gave
+        Transaction.objects.create(book=self.book, kind="GAVE", amount=999, date="2026-11-04", person="Ravi")
+        r = self.client.get(f"/books/{self.book.pk}/insights/?month=2026-11")
+        ins = r.context["ins"]
+        self.assertEqual((ins.spent, ins.prev_spent, ins.change), (Decimal("5400"), Decimal("4500"), Decimal("900")))
+        self.assertEqual(round(ins.change_pct), 20)
+        self.assertEqual([c.code for c in ins.categories], ["RENT", "FOOD", "SHOPPING", "TRANSPORT"])
+        self.assertEqual([(c.code, c.change) for c in ins.spent_more], [("SHOPPING", Decimal("700")), ("FOOD", Decimal("500"))])
+        self.assertEqual(ins.top_expenses[0].remark, "Rent")
+        self.assertEqual([p["amount"] for p in ins.trend][-2:], [Decimal("4500"), Decimal("5400")])
+        self.assertTrue(ins.trend[-1]["selected"])
+        self.assertContains(r, "Where you spent more")
+        self.assertContains(r, "↑ ₹900.00")
+        self.assertContains(r, "20% more")
+        self.assertContains(r, "Show as table")
+
+    def test_daily_average_counts_days_so_far(self):
+        from datetime import date as _d
+        from .services import build_insights
+        self.exp("300", "2026-11-02")
+        ins = build_insights(self.book, _d(2026, 11, 1), _d(2026, 11, 5))
+        self.assertEqual((ins.days_counted, ins.daily_avg), (5, Decimal("60.00")))
+        ins = build_insights(self.book, _d(2026, 10, 1), _d(2026, 11, 5))
+        self.assertEqual(ins.days_counted, 31)
+
+    def test_empty_month_and_access(self):
+        r = self.client.get(f"/books/{self.book.pk}/insights/?month=2026-11")
+        self.assertContains(r, "No expenses in November 2026")
+        other = User.objects.create_user("x", password="pw-12345678")
+        theirs = Book.objects.create(user=other, name="T")
+        self.assertEqual(self.client.get(f"/books/{theirs.pk}/insights/").status_code, 404)
+        self.assertContains(self.client.get(f"/books/{self.book.pk}/"), "📊 Insights")

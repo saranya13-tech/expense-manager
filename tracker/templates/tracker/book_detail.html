@@ -23,7 +23,10 @@
     <div class="breadcrumb hide-mobile"><a href="{% url 'book_list' %}">My books</a> / {{ book.name }}</div>
     <h1>{{ book.name }}</h1>
   </div>
-  <a class="btn btn-ghost btn-sm" href="{% url 'book_edit' book.pk %}">⚙ <span class="hide-mobile">Book settings</span><span class="show-mobile">Settings</span></a>
+  <div class="form-actions" style="margin:0">
+    <a class="btn btn-sm" href="{% url 'book_insights' book.pk %}?month={{ month_value }}">📊 Insights</a>
+    <a class="btn btn-ghost btn-sm" href="{% url 'book_edit' book.pk %}">⚙ <span class="hide-mobile">Book settings</span><span class="show-mobile">Settings</span></a>
+  </div>
 </div>
 
 <div class="stats">

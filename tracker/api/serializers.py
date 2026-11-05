@@ -76,7 +76,7 @@ class TransactionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transaction
-        fields = ["id", "book", "kind", "kind_display", "amount", "person", "date", "remark", "created_at"]
+        fields = ["id", "book", "kind", "kind_display", "amount", "category", "person", "date", "remark", "created_at"]
         read_only_fields = ["book", "created_at"]
         extra_kwargs = {"person": {"help_text": "Required for GAVE / GOT entries; ignored for other kinds."}}
 
@@ -95,6 +95,8 @@ class TransactionSerializer(serializers.ModelSerializer):
         else:
             person = ""
         attrs["person"] = person
+        if kind != Transaction.EXPENSE:
+            attrs["category"] = "OTHER"
         return attrs
 
 

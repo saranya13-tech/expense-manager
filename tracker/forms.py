@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Book, Transaction
+from .models import Book, Category, Transaction
 
 
 class BookForm(forms.ModelForm):
@@ -30,7 +30,7 @@ class BookForm(forms.ModelForm):
 class TransactionForm(forms.ModelForm):
     class Meta:
         model = Transaction
-        fields = ["kind", "amount", "person", "date", "remark"]
+        fields = ["kind", "amount", "category", "person", "date", "remark"]
         labels = {"kind": "Type", "person": "Person"}
         widgets = {
             "kind": forms.RadioSelect,
@@ -40,11 +40,18 @@ class TransactionForm(forms.ModelForm):
             "person": forms.TextInput(attrs={"placeholder": "Name, e.g. Ravi", "list": "people-names", "autocomplete": "off"}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["category"].required = False  # defaults to "Other"
+
     def clean_amount(self):
         amount = self.cleaned_data["amount"]
         if amount <= 0:
             raise forms.ValidationError("Amount must be greater than zero.")
         return amount
+
+    def clean_category(self):
+        return self.cleaned_data.get("category") or Category.OTHER
 
     def clean(self):
         cleaned = super().clean()
@@ -57,4 +64,6 @@ class TransactionForm(forms.ModelForm):
         else:
             person = ""  # only Gave/Got entries belong to a person
         cleaned["person"] = person
+        if kind != Transaction.EXPENSE:
+            cleaned["category"] = Category.OTHER  # categories only describe expenses
         return cleaned

@@ -16,6 +16,11 @@
     <div class="amount-wrap"><span class="prefix">{{ book.currency }}</span>{{ form.amount }}</div>
     {{ form.amount.errors }}
   </div>
+  <div class="field category-field">
+    <label for="{{ form.category.id_for_label }}">Category</label>
+    {{ form.category }}
+    {{ form.category.errors }}
+  </div>
   <div class="field person-field">
     <label for="{{ form.person.id_for_label }}"><span class="hint-GAVE">Gave to</span><span class="hint-GOT">Got from</span></label>
     {{ form.person }}

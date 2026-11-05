@@ -1,0 +1,4 @@
+-r requirements.txt
+gunicorn==26.2.0
+psycopg==3.3.8
+psycopg-binary==3.3.8

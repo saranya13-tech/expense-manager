@@ -264,3 +264,118 @@ def cleanup_months(book, today):
         months.append(m)
         m = shift_month(m, 1)
     return list(reversed(months))
+
+
+# ---------------------------------------------------------------------------
+# Insights: compare spending with last month, find where you spend more
+# ---------------------------------------------------------------------------
+
+@dataclass
+class CategoryRow:
+    code: str
+    label: str
+    emoji: str
+    amount: Decimal
+    prev_amount: Decimal
+    share: float = 0.0        # % of this month's spending
+    bar: float = 0.0          # bar width % relative to the biggest category
+
+    @property
+    def change(self):
+        return self.amount - self.prev_amount
+
+    @property
+    def change_pct(self):
+        return None if not self.prev_amount else float(self.change / self.prev_amount * 100)
+
+
+@dataclass
+class Insights:
+    month: date
+    prev_month: date
+    spent: Decimal
+    prev_spent: Decimal
+    days_counted: int
+    trend: list               # [{"month": date, "amount": Decimal, "height": float, "selected": bool}]
+    categories: list          # CategoryRow, biggest first
+    spent_more: list          # CategoryRow with an increase vs last month, biggest increase first
+    top_expenses: list
+    entry_count: int
+
+    @property
+    def change(self):
+        return self.spent - self.prev_spent
+
+    @property
+    def change_pct(self):
+        return None if not self.prev_spent else float(self.change / self.prev_spent * 100)
+
+    @property
+    def daily_avg(self):
+        return (self.spent / self.days_counted).quantize(Decimal("0.01")) if self.days_counted else ZERO
+
+
+def _month_end(m):
+    return shift_month(m, 1)
+
+
+def build_insights(book, month, today, months_in_trend=6):
+    from calendar import monthrange
+
+    from .models import CATEGORY_EMOJI, Category
+
+    prev = shift_month(month, -1)
+    first = shift_month(month, -(months_in_trend - 1))
+    expenses = list(book.transactions.filter(kind=Transaction.EXPENSE, date__gte=first, date__lt=_month_end(month)))
+
+    def in_month(t, m):
+        return t.date.year == m.year and t.date.month == m.month
+
+    cur = [t for t in expenses if in_month(t, month)]
+    old = [t for t in expenses if in_month(t, prev)]
+
+    # Trend (oldest -> newest)
+    trend = []
+    m = first
+    while m <= month:
+        trend.append({"month": m, "amount": sum((t.amount for t in expenses if in_month(t, m)), ZERO), "selected": m == month})
+        m = shift_month(m, 1)
+    top = max((p["amount"] for p in trend), default=ZERO)
+    for p in trend:
+        p["height"] = float(p["amount"] / top * 100) if top else 0.0
+
+    # Categories
+    by_cat = {}
+    for t in cur:
+        by_cat.setdefault(t.category, [ZERO, ZERO])[0] += t.amount
+    for t in old:
+        by_cat.setdefault(t.category, [ZERO, ZERO])[1] += t.amount
+    labels = dict(Category.choices)
+    rows = [CategoryRow(code, labels.get(code, code), CATEGORY_EMOJI.get(code, "📦"), a, p) for code, (a, p) in by_cat.items()]
+    spent = sum((t.amount for t in cur), ZERO)
+    biggest = max((r.amount for r in rows), default=ZERO)
+    for r in rows:
+        r.share = float(r.amount / spent * 100) if spent else 0.0
+        r.bar = float(r.amount / biggest * 100) if biggest else 0.0
+    rows.sort(key=lambda r: (-r.amount, -r.prev_amount, r.label))
+
+    # Days counted for the daily average: days so far in the current month, all days otherwise.
+    if month == today.replace(day=1):
+        days = today.day
+    elif month > today:
+        days = 0
+    else:
+        days = monthrange(month.year, month.month)[1]
+
+    return Insights(
+        month=month,
+        prev_month=prev,
+        spent=spent,
+        prev_spent=sum((t.amount for t in old), ZERO),
+        days_counted=days,
+        trend=trend,
+        categories=[r for r in rows if r.amount],
+        spent_more=sorted([r for r in rows if r.change > 0], key=lambda r: -r.change),
+        top_expenses=sorted(cur, key=lambda t: (-t.amount, t.date))[:5],
+        entry_count=len(cur),
+    )

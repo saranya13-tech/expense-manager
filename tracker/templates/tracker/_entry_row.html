@@ -6,6 +6,7 @@
       <span class="entry-title">{% if t.remark %}{{ t.remark }}{% elif t.kind == 'GAVE' %}Gave to {{ t.person }}{% elif t.kind == 'GOT' %}Got from {{ t.person }}{% else %}{{ t.get_kind_display }}{% endif %}</span>
       <span class="entry-sub">
         <span class="pill {{ t.kind }}">{{ t.get_kind_display }}</span>
+        {% if t.kind == 'EXPENSE' and t.category != 'OTHER' %}<span class="entry-person">{{ t.category_emoji }} {{ t.get_category_display }}</span>{% endif %}
         {% if t.person %}<span class="entry-person">{% if t.kind == 'GAVE' %}to{% else %}from{% endif %} {{ t.person }}</span>{% endif %}
         {% if show_date %}<span class="entry-person">· {{ t.date|date:"d M Y" }}</span>{% endif %}
       </span>

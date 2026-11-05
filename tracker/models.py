@@ -19,6 +19,26 @@ class Book(models.Model):
         return self.name
 
 
+class Category(models.TextChoices):
+    FOOD = "FOOD", "Food & dining"
+    GROCERIES = "GROCERIES", "Groceries"
+    TRANSPORT = "TRANSPORT", "Transport & fuel"
+    RENT = "RENT", "Rent & home"
+    BILLS = "BILLS", "Bills & recharge"
+    SHOPPING = "SHOPPING", "Shopping"
+    HEALTH = "HEALTH", "Health"
+    ENTERTAINMENT = "ENTERTAINMENT", "Entertainment"
+    EDUCATION = "EDUCATION", "Education"
+    TRAVEL = "TRAVEL", "Travel"
+    OTHER = "OTHER", "Other"
+
+
+CATEGORY_EMOJI = {
+    "FOOD": "🍽️", "GROCERIES": "🛒", "TRANSPORT": "🚗", "RENT": "🏠", "BILLS": "💡", "SHOPPING": "🛍️",
+    "HEALTH": "💊", "ENTERTAINMENT": "🎬", "EDUCATION": "📚", "TRAVEL": "✈️", "OTHER": "📦",
+}
+
+
 class Transaction(models.Model):
     BALANCE = "BALANCE"
     INCOME = "INCOME"
@@ -41,6 +61,8 @@ class Transaction(models.Model):
     date = models.DateField(default=timezone.localdate)
     remark = models.CharField(max_length=255, blank=True)
     person = models.CharField(max_length=100, blank=True, help_text="Who you gave money to / got money from")
+    category = models.CharField(max_length=20, choices=Category.choices, default=Category.OTHER,
+                                help_text="Spending category (used for expenses)")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -49,6 +71,10 @@ class Transaction(models.Model):
     @property
     def signed_amount(self):
         return -self.amount if self.kind in self.MONEY_OUT else self.amount
+
+    @property
+    def category_emoji(self):
+        return CATEGORY_EMOJI.get(self.category, "📦")
 
     def __str__(self):
         return f"{self.date} {self.get_kind_display()} {self.amount} {self.remark}"

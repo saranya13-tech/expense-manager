@@ -54,7 +54,7 @@ Use a free Postgres database from https://neon.tech instead.
 
 1. Create a Neon project and copy its connection string (`postgresql://...`).
 2. Push this repo to GitHub.
-3. In Render, choose **New**, then **Blueprint**, and pick the repo. It reads `render.yaml`.
+3. In Render, choose **New**, then **Blueprint**, and pick the repo. It reads `render.yaml` and installs `requirements-render.txt` (adds the Postgres driver and gunicorn).
 4. When asked, paste the Neon string as `DATABASE_URL`. `SECRET_KEY` is generated for you.
 5. Deploy. `build.sh` installs the dependencies, collects static files and runs migrations.
 
