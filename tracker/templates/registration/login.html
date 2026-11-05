@@ -1,0 +1,12 @@
+{% extends "tracker/base.html" %}
+{% block content %}
+<div class="card auth">
+  <h2 style="margin-top:0">Log in</h2>
+  <form method="post">
+    {% include "registration/_form.html" %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <button type="submit" style="width:100%">Log in</button>
+  </form>
+  <p class="muted">No account? <a href="{% url 'register' %}">Register</a></p>
+</div>
+{% endblock %}

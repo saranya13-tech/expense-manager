@@ -1,0 +1,18 @@
+{% extends "tracker/base.html" %}
+{% block content %}
+<div class="card" style="max-width:480px">
+  <h2 style="margin-top:0">Edit Entry</h2>
+  <form method="post">
+    {% csrf_token %}
+    {% for field in form %}
+      <div style="margin-bottom:12px">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {{ field.errors }}
+      </div>
+    {% endfor %}
+    <button type="submit">Save</button>
+    <a class="btn btn-light" href="{% url 'dashboard' %}?month={{ t.date|date:'Y-m' }}">Cancel</a>
+  </form>
+</div>
+{% endblock %}

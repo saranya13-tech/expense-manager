@@ -1,0 +1,78 @@
+{% extends "tracker/base.html" %}
+{% block content %}
+<div class="stats">
+  <div class="stat big"><div class="label">Current Balance</div>
+    <div class="value">{{ current_balance|floatformat:2 }}</div></div>
+  <div class="stat"><div class="label">Total Balance Added</div>
+    <div class="value blue">{{ overall.BALANCE|floatformat:2 }}</div></div>
+  <div class="stat"><div class="label">Total Income</div>
+    <div class="value green">{{ overall.INCOME|floatformat:2 }}</div></div>
+  <div class="stat"><div class="label">Total Expense</div>
+    <div class="value red">{{ overall.EXPENSE|floatformat:2 }}</div></div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">Add Entry</h2>
+  <form method="post" class="inline">
+    {% csrf_token %}
+    {% for field in form %}
+      <div>
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {{ field.errors }}
+      </div>
+    {% endfor %}
+    <div><button type="submit">Add</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="toolbar">
+    <h2 style="margin:0">Daily Entries</h2>
+    <form method="get">
+      <input type="month" name="month" value="{{ month }}">
+      <button type="submit" class="btn-light btn">Show</button>
+    </form>
+  </div>
+  <p class="muted">
+    This month — Added: <b class="blue">{{ month_totals.BALANCE|floatformat:2 }}</b> ·
+    Income: <b class="green">{{ month_totals.INCOME|floatformat:2 }}</b> ·
+    Expense: <b class="red">{{ month_totals.EXPENSE|floatformat:2 }}</b> ·
+    Net: <b>{{ month_net|floatformat:2 }}</b>
+  </p>
+
+  {% for day in days %}
+    <div class="card" style="padding:14px">
+      <div class="day-head">
+        <h3>{{ day.date|date:"D, d M Y" }}</h3>
+        <span class="muted" style="font-size:13px">
+          In <b class="green">+{{ day.in|floatformat:2 }}</b> ·
+          Out <b class="red">-{{ day.out|floatformat:2 }}</b> ·
+          Closing balance <b>{{ day.closing|floatformat:2 }}</b>
+        </span>
+      </div>
+      <table>
+        <tr><th>Type</th><th>Remark</th><th class="right">Amount</th><th class="right">Actions</th></tr>
+        {% for t in day.items %}
+        <tr>
+          <td><span class="pill {{ t.kind }}">{{ t.get_kind_display }}</span></td>
+          <td>{{ t.remark|default:"—" }}</td>
+          <td class="right {% if t.kind == 'EXPENSE' %}red{% else %}green{% endif %}">
+            {% if t.kind == 'EXPENSE' %}-{% else %}+{% endif %}{{ t.amount|floatformat:2 }}
+          </td>
+          <td class="right">
+            <a class="link btn" href="{% url 'edit' t.pk %}">Edit</a>
+            <form method="post" action="{% url 'delete' t.pk %}" style="display:inline"
+                  onsubmit="return confirm('Delete this entry?')">
+              {% csrf_token %}<button class="link red" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% empty %}
+    <p class="muted">No entries for this month yet. Start by adding a balance above.</p>
+  {% endfor %}
+</div>
+{% endblock %}
