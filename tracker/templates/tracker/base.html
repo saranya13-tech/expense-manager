@@ -9,6 +9,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Spendly">
 <title>{% block title %}Spendly{% endblock %} · Spendly</title>
+<script>
+  // Apply the saved theme before the page paints (no white flash in dark mode).
+  (() => {
+    const root = document.documentElement;
+    const mode = localStorage.getItem('spendly-theme') || 'system';
+    const dark = mode === 'dark' || (mode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+    root.dataset.theme = dark ? 'dark' : 'light';
+    root.dataset.accent = localStorage.getItem('spendly-accent') || 'indigo';
+  })();
+</script>
 <link rel="stylesheet" href="{% static 'tracker/app.css' %}">
 <link rel="manifest" href="{% url 'pwa_manifest' %}">
 <link rel="icon" type="image/png" sizes="192x192" href="{% static 'tracker/icon-192.png' %}">
@@ -30,6 +40,20 @@
           <div class="menu">
             <div class="menu-head">Signed in as<br><b>{{ user.username }}</b></div>
             <a href="{% url 'book_list' %}">📚 All books</a>
+            <hr>
+            <div class="menu-label">Theme</div>
+            <div class="theme-modes" role="group" aria-label="Theme">
+              <button type="button" data-theme-choice="light">☀️ Light</button>
+              <button type="button" data-theme-choice="dark">🌙 Dark</button>
+              <button type="button" data-theme-choice="system">⚙️ Auto</button>
+            </div>
+            <div class="menu-label">Colour</div>
+            <div class="accents" role="group" aria-label="Accent colour">
+              <button type="button" data-accent-choice="indigo" aria-label="Indigo" title="Indigo"></button>
+              <button type="button" data-accent-choice="emerald" aria-label="Emerald" title="Emerald"></button>
+              <button type="button" data-accent-choice="rose" aria-label="Rose" title="Rose"></button>
+              <button type="button" data-accent-choice="ocean" aria-label="Ocean" title="Ocean"></button>
+            </div>
             <button type="button" class="menu-item" id="install-app" hidden>📲 Install app</button>
             <div class="menu-note" id="ios-install" hidden>
               <b>📲 Install on iPhone</b><br>Tap <b>Share</b> <span aria-hidden="true">⎋</span> then <b>Add to Home Screen</b>.
@@ -66,6 +90,27 @@
     f.querySelector('.flash-close').addEventListener('click', hide);
     setTimeout(hide, 4500);
   });
+</script>
+<script>
+  // Theme + accent picker (saved per device in localStorage).
+  (() => {
+    const root = document.documentElement;
+    const media = matchMedia('(prefers-color-scheme: dark)');
+    const meta = document.querySelector('meta[name="theme-color"]');
+    const apply = () => {
+      const mode = localStorage.getItem('spendly-theme') || 'system';
+      const dark = mode === 'dark' || (mode === 'system' && media.matches);
+      root.dataset.theme = dark ? 'dark' : 'light';
+      root.dataset.accent = localStorage.getItem('spendly-accent') || 'indigo';
+      if (meta) meta.content = dark ? '#151b2b' : '#ffffff';
+      document.querySelectorAll('[data-theme-choice]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.themeChoice === mode)));
+      document.querySelectorAll('[data-accent-choice]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.accentChoice === root.dataset.accent)));
+    };
+    document.querySelectorAll('[data-theme-choice]').forEach(b => b.addEventListener('click', () => { localStorage.setItem('spendly-theme', b.dataset.themeChoice); apply(); }));
+    document.querySelectorAll('[data-accent-choice]').forEach(b => b.addEventListener('click', () => { localStorage.setItem('spendly-accent', b.dataset.accentChoice); apply(); }));
+    media.addEventListener('change', apply);
+    apply();
+  })();
 </script>
 <script>
   // PWA: register the service worker (offline page + fast static files).

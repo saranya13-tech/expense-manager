@@ -138,3 +138,38 @@ class BookApiTests(APITestCase):
         self.assertEqual(self.add(theirs.id, "EXPENSE", "1").status_code, 404)
         self.assertEqual(Transaction.objects.count(), 1)
         self.assertTrue(Book.objects.filter(pk=theirs.pk).exists())
+
+
+class GaveGotApiTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("a", password="pw-12345678")
+        self.client.force_authenticate(self.user)
+        self.book = Book.objects.create(user=self.user, name="B")
+
+    def add(self, **data):
+        data.setdefault("date", "2026-11-01")
+        return self.client.post(f"{API}/books/{self.book.id}/entries/", data)
+
+    def test_person_required(self):
+        r = self.add(kind="GAVE", amount="10")
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("person", r.data)
+
+    def test_people_in_ledger_and_book(self):
+        self.add(kind="BALANCE", amount="1000")
+        self.add(kind="GAVE", amount="300", person="Ravi")
+        self.add(kind="GOT", amount="500", person="Meena")
+        r = self.client.get(f"{API}/books/{self.book.id}/ledger/?month=2026-11")
+        self.assertEqual(r.data["balance"], "1200.00")
+        self.assertEqual((r.data["to_receive"], r.data["to_pay"]), ("300.00", "500.00"))
+        self.assertEqual({p["name"]: p["status"] for p in r.data["people"]}, {"Ravi": "get", "Meena": "give"})
+        self.assertEqual(r.data["totals"]["GAVE"], "300.00")
+        b = self.client.get(f"{API}/books/{self.book.id}/").data
+        self.assertEqual((b["balance"], b["to_receive"], b["to_pay"]), ("1200.00", "300.00", "500.00"))
+        r = self.client.get(f"{API}/books/{self.book.id}/ledger/?person=ravi")
+        self.assertEqual([i["person"] for d in r.data["days"] for i in d["items"]], ["Ravi"])
+
+    def test_changing_kind_clears_person(self):
+        eid = self.add(kind="GAVE", amount="10", person="Ravi").data["id"]
+        r = self.client.patch(f"{API}/entries/{eid}/", {"kind": "EXPENSE"})
+        self.assertEqual(r.data["person"], "")

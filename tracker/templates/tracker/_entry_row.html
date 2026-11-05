@@ -1,0 +1,24 @@
+{% load money %}
+<div class="entry">
+  <a class="entry-link" href="{% url 'entry_edit' t.pk %}" aria-label="Edit entry">
+    <span class="entry-icon {{ t.kind }}">{% if t.kind == 'EXPENSE' %}↓{% elif t.kind == 'INCOME' %}↑{% elif t.kind == 'GAVE' %}↗{% elif t.kind == 'GOT' %}↙{% else %}+{% endif %}</span>
+    <span class="entry-main">
+      <span class="entry-title">{% if t.remark %}{{ t.remark }}{% elif t.kind == 'GAVE' %}Gave to {{ t.person }}{% elif t.kind == 'GOT' %}Got from {{ t.person }}{% else %}{{ t.get_kind_display }}{% endif %}</span>
+      <span class="entry-sub">
+        <span class="pill {{ t.kind }}">{{ t.get_kind_display }}</span>
+        {% if t.person %}<span class="entry-person">{% if t.kind == 'GAVE' %}to{% else %}from{% endif %} {{ t.person }}</span>{% endif %}
+        {% if show_date %}<span class="entry-person">· {{ t.date|date:"d M Y" }}</span>{% endif %}
+      </span>
+    </span>
+    <span class="entry-amount">
+      <span class="amt num {% if t.kind == 'EXPENSE' or t.kind == 'GAVE' %}red{% else %}green{% endif %}">{% if t.kind == 'EXPENSE' or t.kind == 'GAVE' %}-{% else %}+{% endif %}{{ t.amount|money:book.currency }}</span>
+      <span class="after num">Bal {{ t.running|money:book.currency }}</span>
+    </span>
+  </a>
+  <div class="entry-actions">
+    <a class="icon-btn" href="{% url 'entry_edit' t.pk %}" title="Edit" aria-label="Edit">✎</a>
+    <form method="post" action="{% url 'entry_delete' t.pk %}" onsubmit="return confirm('Delete this entry?')">
+      {% csrf_token %}<button class="icon-btn danger" type="submit" title="Delete" aria-label="Delete">🗑</button>
+    </form>
+  </div>
+</div>

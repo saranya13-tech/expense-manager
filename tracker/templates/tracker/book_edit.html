@@ -1,4 +1,5 @@
 {% extends "tracker/base.html" %}
+{% load money %}
 {% block title %}Settings · {{ book.name }}{% endblock %}
 {% block topbar_left %}
   {% url 'book_detail' book.pk as back_url %}{% include "tracker/_back.html" with back_label=book.name %}
@@ -23,6 +24,56 @@
       </div>
     </form>
   </div>
+  <div class="card">
+    <h2>Backup</h2>
+    <p class="muted small">Download every entry in this book as a CSV file. It opens in Excel or Google Sheets.</p>
+    <a class="btn btn-ghost" href="{% url 'book_export' book.pk %}">⬇ Download CSV</a>
+  </div>
+
+  <div class="card" id="cleanup">
+    <h2>Clear old months</h2>
+    <p class="muted small">Free up space by deleting old entries. Your <b>current balance</b> and what <b>people owe</b> stay exactly the same: they're kept as "carried forward" entries. Download a CSV backup first if you want to keep the details.</p>
+    {% if cleanup_months %}
+      <form method="get" action="#cleanup" class="form-actions" style="align-items:end">
+        <div class="field" style="flex:1;min-width:200px;margin:0">
+          <label for="keep_from">Keep entries from</label>
+          <select id="keep_from" name="keep_from" onchange="this.form.submit()">
+            <option value="">Choose a month…</option>
+            {% for m in cleanup_months %}
+              <option value="{{ m|date:'Y-m' }}" {% if preview and preview.keep_from == m %}selected{% endif %}>{{ m|date:"F Y" }} onward</option>
+            {% endfor %}
+          </select>
+        </div>
+        <noscript><button class="btn btn-ghost" type="submit">Preview</button></noscript>
+      </form>
+      {% if preview %}
+        <div class="cleanup-preview">
+          {% if preview.entry_count %}
+            <b>{{ preview.entry_count }} entr{{ preview.entry_count|pluralize:"y,ies" }}</b> from {{ preview.first_date|date:"d M Y" }} to {{ preview.last_date|date:"d M Y" }} will be deleted. Kept as carried-forward entries on {{ preview.carry_date|date:"d M Y" }}:
+            <ul>
+              <li>Book balance at that date: <b class="num">{{ preview.balance|money:book.currency }}</b> (stays the same)</li>
+              {% for p in preview.people %}
+                <li>{{ p.name }}: {% if p.net > 0 %}owes you{% else %}you owe{% endif %} <b class="num">{{ p.abs_net|money:book.currency }}</b></li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            Nothing to clear before {{ preview.keep_from|date:"F Y" }}.
+          {% endif %}
+        </div>
+        {% if preview.entry_count %}
+        <form method="post" action="{% url 'book_cleanup' book.pk %}"
+              onsubmit="return confirm('Delete {{ preview.entry_count }} old entries before {{ preview.keep_from|date:"F Y" }}? Balances are kept, but the individual old entries cannot be recovered.')">
+          {% csrf_token %}
+          <input type="hidden" name="keep_from" value="{{ preview.keep_from|date:'Y-m' }}">
+          <button class="btn btn-danger" type="submit">🧹 Clear {{ preview.entry_count }} old entr{{ preview.entry_count|pluralize:"y,ies" }}</button>
+        </form>
+        {% endif %}
+      {% endif %}
+    {% else %}
+      <p class="muted small">Nothing to clear yet: all entries are from this month.</p>
+    {% endif %}
+  </div>
+
   <div class="card danger-zone">
     <h2>Delete this book</h2>
     <p class="muted small">This permanently deletes “{{ book.name }}” and all {{ book.transactions.count }} of its entries. This cannot be undone.</p>

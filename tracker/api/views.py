@@ -113,7 +113,8 @@ class BookViewSet(viewsets.ModelViewSet):
         summary="Ledger for one month: balances, totals and entries grouped by day",
         parameters=[
             OpenApiParameter("month", str, description="YYYY-MM (default: current month)"),
-            OpenApiParameter("q", str, description="Filter entries by remark (case-insensitive)"),
+            OpenApiParameter("q", str, description="Filter entries by remark or person (case-insensitive)"),
+            OpenApiParameter("person", str, description="Show all entries with this person, across all months"),
         ],
         responses=LedgerSerializer,
     )
@@ -121,7 +122,8 @@ class BookViewSet(viewsets.ModelViewSet):
     def ledger(self, request, pk=None):
         book = self.get_object()
         month = parse_month(request.query_params.get("month"), timezone.localdate())
-        led = build_ledger(book, month, request.query_params.get("q", "").strip())
+        led = build_ledger(book, month, request.query_params.get("q", "").strip(),
+                           request.query_params.get("person", "").strip())
         data = {
             "book": self._with_totals(book),
             "balance": led.balance,
@@ -131,8 +133,13 @@ class BookViewSet(viewsets.ModelViewSet):
             "next_month": shift_month(month, 1).strftime("%Y-%m"),
             "month_totals": led.month_totals,
             "month_in": led.month_in,
+            "month_out": led.month_out,
             "month_net": led.month_net,
             "has_entries": led.has_entries,
+            "person": led.person,
+            "people": led.people,
+            "to_receive": led.to_receive,
+            "to_pay": led.to_pay,
             "days": led.days,
         }
         return Response(LedgerSerializer(data, context=self.get_serializer_context()).data)

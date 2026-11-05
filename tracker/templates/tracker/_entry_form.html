@@ -1,23 +1,35 @@
 {% csrf_token %}
-<div class="field">
-  <span class="label">Type</span>
-  <div class="segmented">
-    {% for radio in form.kind %}{{ radio.tag }}<label for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>{% endfor %}
+<div class="entry-form">
+  <div class="field">
+    <span class="label">Type</span>
+    <div class="segmented kinds">
+      {% for radio in form.kind %}{{ radio.tag }}<label for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>{% endfor %}
+    </div>
+    <p class="kind-hint help">
+      <span class="hint-GAVE">Money you gave to someone. They owe you.</span>
+      <span class="hint-GOT">Money you got from someone: a loan, or someone paying you back.</span>
+    </p>
+    {{ form.kind.errors }}
   </div>
-  {{ form.kind.errors }}
-</div>
-<div class="field">
-  <label for="{{ form.amount.id_for_label }}">Amount</label>
-  <div class="amount-wrap"><span class="prefix">{{ book.currency }}</span>{{ form.amount }}</div>
-  {{ form.amount.errors }}
-</div>
-{% include "tracker/_field.html" with field=form.remark %}
-<div class="field">
-  <label for="{{ form.date.id_for_label }}">Date</label>
-  {{ form.date }}
-  <div class="chips">
-    <button type="button" class="chip" data-date-offset="0">Today</button>
-    <button type="button" class="chip" data-date-offset="-1">Yesterday</button>
+  <div class="field">
+    <label for="{{ form.amount.id_for_label }}">Amount</label>
+    <div class="amount-wrap"><span class="prefix">{{ book.currency }}</span>{{ form.amount }}</div>
+    {{ form.amount.errors }}
   </div>
-  {{ form.date.errors }}
+  <div class="field person-field">
+    <label for="{{ form.person.id_for_label }}"><span class="hint-GAVE">Gave to</span><span class="hint-GOT">Got from</span></label>
+    {{ form.person }}
+    <datalist id="people-names">{% for p in people %}<option value="{{ p.name }}"></option>{% endfor %}</datalist>
+    {{ form.person.errors }}
+  </div>
+  {% include "tracker/_field.html" with field=form.remark %}
+  <div class="field">
+    <label for="{{ form.date.id_for_label }}">Date</label>
+    {{ form.date }}
+    <div class="chips">
+      <button type="button" class="chip" data-date-offset="0">Today</button>
+      <button type="button" class="chip" data-date-offset="-1">Yesterday</button>
+    </div>
+    {{ form.date.errors }}
+  </div>
 </div>

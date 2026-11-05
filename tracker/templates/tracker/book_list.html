@@ -40,6 +40,12 @@
       <span class="green num">↑ {{ b.income|money:b.currency }}</span>
       <span class="red num">↓ {{ b.expense|money:b.currency }}</span>
     </div>
+    {% if b.to_receive or b.to_pay %}
+    <div class="split dues">
+      {% if b.to_receive %}<span class="due get">You will get <b class="num">{{ b.to_receive|money:b.currency }}</b></span>{% endif %}
+      {% if b.to_pay %}<span class="due give">You will give <b class="num">{{ b.to_pay|money:b.currency }}</b></span>{% endif %}
+    </div>
+    {% endif %}
   </a>
   {% endfor %}
   <a class="book-card new" href="#new-book" onclick="document.getElementById('new-book').hidden=false;document.getElementById('id_name').focus();return false">

@@ -30,13 +30,14 @@ class BookForm(forms.ModelForm):
 class TransactionForm(forms.ModelForm):
     class Meta:
         model = Transaction
-        fields = ["kind", "amount", "date", "remark"]
-        labels = {"kind": "Type"}
+        fields = ["kind", "amount", "person", "date", "remark"]
+        labels = {"kind": "Type", "person": "Person"}
         widgets = {
             "kind": forms.RadioSelect,
             "date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
             "amount": forms.NumberInput(attrs={"step": "0.01", "min": "0.01", "placeholder": "0.00", "inputmode": "decimal"}),
             "remark": forms.TextInput(attrs={"placeholder": "What was it for? e.g. Groceries, Salary, Rent"}),
+            "person": forms.TextInput(attrs={"placeholder": "Name, e.g. Ravi", "list": "people-names", "autocomplete": "off"}),
         }
 
     def clean_amount(self):
@@ -44,3 +45,16 @@ class TransactionForm(forms.ModelForm):
         if amount <= 0:
             raise forms.ValidationError("Amount must be greater than zero.")
         return amount
+
+    def clean(self):
+        cleaned = super().clean()
+        kind = cleaned.get("kind")
+        person = " ".join((cleaned.get("person") or "").split())
+        if kind in Transaction.PERSON_KINDS:
+            if not person:
+                verb = "gave money to" if kind == Transaction.GAVE else "got money from"
+                self.add_error("person", f"Enter the name of the person you {verb}.")
+        else:
+            person = ""  # only Gave/Got entries belong to a person
+        cleaned["person"] = person
+        return cleaned

@@ -1,0 +1,24 @@
+{% load money %}
+<div class="card people-card">
+  <div class="card-head">
+    <h2>People</h2>
+    <span class="muted small">Gave &amp; Got</span>
+  </div>
+  <div class="people-totals">
+    <div class="pt get"><div class="k">You will get</div><div class="v num">{{ to_receive|money:book.currency }}</div></div>
+    <div class="pt give"><div class="k">You will give</div><div class="v num">{{ to_pay|money:book.currency }}</div></div>
+  </div>
+  <ul class="people-list">
+    {% for p in people %}
+    <li>
+      <a class="person-row {% if person and p.name|lower == person|lower %}active{% endif %}" href="?person={{ p.name|urlencode }}">
+        <span class="avatar sm">{{ p.name|first }}</span>
+        <span class="person-name">{{ p.name }}<span class="muted small">{{ p.entry_count }} entr{{ p.entry_count|pluralize:"y,ies" }}</span></span>
+        {% if p.status == 'get' %}<span class="person-net get"><small>You will get</small><b class="num">{{ p.abs_net|money:book.currency }}</b></span>
+        {% elif p.status == 'give' %}<span class="person-net give"><small>You will give</small><b class="num">{{ p.abs_net|money:book.currency }}</b></span>
+        {% else %}<span class="person-net settled"><small>Settled</small><b>✓</b></span>{% endif %}
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+</div>

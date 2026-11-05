@@ -23,17 +23,24 @@ class Transaction(models.Model):
     BALANCE = "BALANCE"
     INCOME = "INCOME"
     EXPENSE = "EXPENSE"
+    GAVE = "GAVE"  # money given to someone (they owe you)
+    GOT = "GOT"    # money received from someone (you owe them / they paid you back)
     KIND_CHOICES = [
         (BALANCE, "Add Balance"),
         (INCOME, "Income"),
         (EXPENSE, "Expense"),
+        (GAVE, "Gave"),
+        (GOT, "Got"),
     ]
+    MONEY_OUT = (EXPENSE, GAVE)
+    PERSON_KINDS = (GAVE, GOT)
 
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="transactions")
     kind = models.CharField(max_length=10, choices=KIND_CHOICES, default=EXPENSE)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     date = models.DateField(default=timezone.localdate)
     remark = models.CharField(max_length=255, blank=True)
+    person = models.CharField(max_length=100, blank=True, help_text="Who you gave money to / got money from")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -41,7 +48,7 @@ class Transaction(models.Model):
 
     @property
     def signed_amount(self):
-        return -self.amount if self.kind == self.EXPENSE else self.amount
+        return -self.amount if self.kind in self.MONEY_OUT else self.amount
 
     def __str__(self):
         return f"{self.date} {self.get_kind_display()} {self.amount} {self.remark}"

@@ -50,7 +50,30 @@
     </form>
   </div>
 
+  <div class="ledger-col">
+  {% if people %}{% include "tracker/_people.html" %}{% endif %}
   <div class="card ledger">
+    {% if person %}
+    <div class="person-banner">
+      <div>
+        <div class="muted small">All entries with</div>
+        <div class="person-banner-name">{{ person }}</div>
+        {% if person_summary %}
+          {% if person_summary.status == 'get' %}<div class="green small"><b>{{ person }} owes you {{ person_summary.abs_net|money:book.currency }}</b></div>
+          {% elif person_summary.status == 'give' %}<div class="red small"><b>You owe {{ person }} {{ person_summary.abs_net|money:book.currency }}</b></div>
+          {% else %}<div class="muted small"><b>All settled ✓</b></div>{% endif %}
+        {% endif %}
+      </div>
+      <a class="btn btn-ghost btn-sm" href="?">✕ Clear</a>
+    </div>
+    {% if person_summary %}
+    <div class="month-summary three">
+      <div><div class="k">You gave</div><div class="v num red">{{ person_summary.gave|money:book.currency }}</div></div>
+      <div><div class="k">You got</div><div class="v num green">{{ person_summary.got|money:book.currency }}</div></div>
+      <div><div class="k">{% if person_summary.status == 'give' %}You will give{% else %}You will get{% endif %}</div><div class="v num">{{ person_summary.abs_net|money:book.currency }}</div></div>
+    </div>
+    {% endif %}
+    {% else %}
     <div class="card-head" style="margin-bottom:12px">
       <div class="month-nav">
         <a class="icon-btn" href="?month={{ prev_month }}" aria-label="Previous month">‹</a>
@@ -60,16 +83,17 @@
       {% if not is_current_month %}<a class="btn btn-ghost btn-sm" href="?">This month</a>{% endif %}
       <form class="search" method="get">
         <input type="hidden" name="month" value="{{ month_value }}">
-        <input type="search" name="q" value="{{ query }}" placeholder="Search remarks…" enterkeyhint="search">
+        <input type="search" name="q" value="{{ query }}" placeholder="Search remarks or names…" enterkeyhint="search">
       </form>
     </div>
 
     <div class="month-summary">
       <div><div class="k">Money in</div><div class="v num green">{{ month_in|money:book.currency }}</div></div>
-      <div><div class="k">Expense</div><div class="v num red">{{ month_totals.EXPENSE|money:book.currency }}</div></div>
+      <div><div class="k">Money out</div><div class="v num red">{{ month_out|money:book.currency }}</div></div>
       <div><div class="k">Net</div><div class="v num {% if month_net < 0 %}red{% endif %}">{{ month_net|money:book.currency }}</div></div>
       <div><div class="k">Balance added</div><div class="v num blue">{{ month_totals.BALANCE|money:book.currency }}</div></div>
     </div>
+    {% endif %}
 
     {% for day in days %}
     <section class="day">
@@ -82,38 +106,23 @@
         </div>
       </div>
       {% for t in day.items %}
-      <div class="entry">
-        <a class="entry-link" href="{% url 'entry_edit' t.pk %}" aria-label="Edit {{ t.remark|default:t.get_kind_display }}">
-          <span class="entry-icon {{ t.kind }}">{% if t.kind == 'EXPENSE' %}↓{% elif t.kind == 'INCOME' %}↑{% else %}+{% endif %}</span>
-          <span class="entry-main">
-            <span class="entry-title">{{ t.remark|default:t.get_kind_display }}</span>
-            <span class="entry-sub"><span class="pill {{ t.kind }}">{{ t.get_kind_display }}</span></span>
-          </span>
-          <span class="entry-amount">
-            <span class="amt num {% if t.kind == 'EXPENSE' %}red{% else %}green{% endif %}">{% if t.kind == 'EXPENSE' %}-{% else %}+{% endif %}{{ t.amount|money:book.currency }}</span>
-            <span class="after num">Bal {{ t.running|money:book.currency }}</span>
-          </span>
-        </a>
-        <div class="entry-actions">
-          <a class="icon-btn" href="{% url 'entry_edit' t.pk %}" title="Edit" aria-label="Edit">✎</a>
-          <form method="post" action="{% url 'entry_delete' t.pk %}" onsubmit="return confirm('Delete this entry?')">
-            {% csrf_token %}<button class="icon-btn danger" type="submit" title="Delete" aria-label="Delete">🗑</button>
-          </form>
-        </div>
-      </div>
+      {% include "tracker/_entry_row.html" %}
       {% endfor %}
     </section>
     {% empty %}
     <div class="empty">
-      {% if query %}
+      {% if person %}
+        <div class="big">👤</div><h3>No entries with {{ person }}</h3><p><a href="?">Back to this month</a></p>
+      {% elif query %}
         <div class="big">🔍</div><h3>No matches</h3><p>No entries in {{ month|date:"F" }} match “{{ query }}”. <a href="?month={{ month_value }}">Clear search</a></p>
       {% elif has_entries %}
         <div class="big">🗓️</div><h3>Nothing in {{ month|date:"F Y" }}</h3><p>Use ‹ › to see other months, or add an entry.</p>
       {% else %}
-        <div class="big">📒</div><h3>This book is empty</h3><p>Tap <b>Add entry</b> and choose <b>Add Balance</b> to enter the money you have now.</p>
+        <div class="big">📒</div><h3>This book is empty</h3><p>Tap <b>Add entry</b> and choose <b>Add Balance</b> to enter the money you have now. Use <b>Gave</b> / <b>Got</b> to track money with people.</p>
       {% endif %}
     </div>
     {% endfor %}
+  </div>
   </div>
 </div>
 {% endblock %}

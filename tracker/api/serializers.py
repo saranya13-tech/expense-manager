@@ -45,11 +45,18 @@ class BookSerializer(serializers.ModelSerializer):
     added = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True, default=0)
     income = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True, default=0)
     expense = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True, default=0)
+    gave = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True, default=0)
+    got = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True, default=0)
+    to_receive = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True, default=0,
+                                          help_text="Total people owe you in this book.")
+    to_pay = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True, default=0,
+                                      help_text="Total you owe people in this book.")
     entry_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
         model = Book
-        fields = ["id", "name", "currency", "created_at", "balance", "added", "income", "expense", "entry_count"]
+        fields = ["id", "name", "currency", "created_at", "balance", "added", "income", "expense",
+                  "gave", "got", "to_receive", "to_pay", "entry_count"]
         read_only_fields = ["created_at"]
 
     def validate_name(self, value):
@@ -69,13 +76,26 @@ class TransactionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Transaction
-        fields = ["id", "book", "kind", "kind_display", "amount", "date", "remark", "created_at"]
+        fields = ["id", "book", "kind", "kind_display", "amount", "person", "date", "remark", "created_at"]
         read_only_fields = ["book", "created_at"]
+        extra_kwargs = {"person": {"help_text": "Required for GAVE / GOT entries; ignored for other kinds."}}
 
     def validate_amount(self, value):
         if value <= 0:
             raise serializers.ValidationError("Amount must be greater than zero.")
         return value
+
+    def validate(self, attrs):
+        kind = attrs.get("kind", getattr(self.instance, "kind", None))
+        person = attrs.get("person", getattr(self.instance, "person", ""))
+        person = " ".join((person or "").split())
+        if kind in Transaction.PERSON_KINDS:
+            if not person:
+                raise serializers.ValidationError({"person": "A person's name is required for Gave/Got entries."})
+        else:
+            person = ""
+        attrs["person"] = person
+        return attrs
 
 
 class LedgerEntrySerializer(TransactionSerializer):
@@ -90,6 +110,18 @@ class KindTotalsSerializer(serializers.Serializer):
     BALANCE = serializers.DecimalField(max_digits=14, decimal_places=2)
     INCOME = serializers.DecimalField(max_digits=14, decimal_places=2)
     EXPENSE = serializers.DecimalField(max_digits=14, decimal_places=2)
+    GAVE = serializers.DecimalField(max_digits=14, decimal_places=2)
+    GOT = serializers.DecimalField(max_digits=14, decimal_places=2)
+
+
+class PersonSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    gave = serializers.DecimalField(max_digits=14, decimal_places=2)
+    got = serializers.DecimalField(max_digits=14, decimal_places=2)
+    net = serializers.DecimalField(max_digits=14, decimal_places=2,
+                                   help_text="Positive: they owe you. Negative: you owe them.")
+    status = serializers.ChoiceField(choices=["get", "give", "settled"])
+    entry_count = serializers.IntegerField()
 
 
 class LedgerDaySerializer(serializers.Serializer):
@@ -109,6 +141,11 @@ class LedgerSerializer(serializers.Serializer):
     next_month = serializers.CharField()
     month_totals = KindTotalsSerializer()
     month_in = serializers.DecimalField(max_digits=14, decimal_places=2)
+    month_out = serializers.DecimalField(max_digits=14, decimal_places=2)
     month_net = serializers.DecimalField(max_digits=14, decimal_places=2)
     has_entries = serializers.BooleanField()
+    person = serializers.CharField(help_text="Set when the ledger is filtered to one person (all months).")
+    people = PersonSerializer(many=True)
+    to_receive = serializers.DecimalField(max_digits=14, decimal_places=2)
+    to_pay = serializers.DecimalField(max_digits=14, decimal_places=2)
     days = LedgerDaySerializer(many=True)
