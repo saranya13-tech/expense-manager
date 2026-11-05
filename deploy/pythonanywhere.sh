@@ -7,7 +7,7 @@ set -euo pipefail
 REPO="https://github.com/saranya13-tech/expense-manager.git"
 U="$(whoami)"
 PA_HOST="${PYTHONANYWHERE_DOMAIN:-pythonanywhere.com}"   # pythonanywhere.com or eu.pythonanywhere.com
-DOMAIN="${U}.${PA_HOST}"
+DOMAIN="$(echo "${U}.${PA_HOST}" | tr '[:upper:]' '[:lower:]')"   # PA domains are lowercase
 APP="$HOME/expense-manager"
 VENV="$HOME/.virtualenvs/expense-venv"
 SECRET_FILE="$HOME/.expense_secret_key"
@@ -15,7 +15,7 @@ WSGI="/var/www/$(echo "$DOMAIN" | tr '.' '_')_wsgi.py"
 API="https://www.${PA_HOST}/api/v0/user/${U}"
 
 PY=""
-for v in 3.13 3.12; do command -v "python$v" >/dev/null && { PY="python$v"; PYVER="${v/./}"; break; }; done
+for v in ${PY_VERSION:-} 3.12 3.13; do command -v "python$v" >/dev/null && { PY="python$v"; PYVER="${v/./}"; break; }; done
 [ -n "$PY" ] || { echo "Need Python 3.12+ (Django 6). Update your system image in Account > System image."; exit 1; }
 echo "==> Using $PY for $DOMAIN"
 
