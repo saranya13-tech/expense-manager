@@ -33,38 +33,19 @@ python -c "import secrets; print(secrets.token_urlsafe(50))"
 ## Option A: PythonAnywhere (recommended, free, keeps data in SQLite)
 
 1. Sign up for a free "Beginner" account at https://www.pythonanywhere.com.
-2. Open a **Bash console** and get the code (push it to GitHub first, or upload a zip in the Files tab):
+2. Optional, but it saves clicks: go to **Account**, then **API Token**, and click **Create a new API token**.
+   This lets the script create and configure the web app for you.
+3. Open **Consoles**, then **Bash**, and run:
    ```bash
-   git clone https://github.com/<you>/expense.git
-   cd expense
-   mkvirtualenv --python=python3.12 expense-venv
-   pip install -r requirements.txt
-   python manage.py migrate
-   python manage.py collectstatic --no-input
-   python manage.py createsuperuser   # optional, for /admin
+   curl -fsSL https://raw.githubusercontent.com/saranya13-tech/expense-manager/main/deploy/pythonanywhere.sh | bash
    ```
-3. Go to the **Web** tab, then **Add a new web app**, then **Manual configuration**, then **Python 3.12**.
-4. Under **Virtualenv**, enter `/home/<username>/.virtualenvs/expense-venv`.
-5. Under **Static files**, add URL `/static/` and directory `/home/<username>/expense/staticfiles`.
-6. Click the **WSGI configuration file** link and replace its contents with:
-   ```python
-   import os, sys
+4. If you skipped the token, the script tells you which buttons to click on the **Web** tab. Do that, then run the command again.
+5. Open `https://<username>.pythonanywhere.com` and register.
 
-   path = '/home/<username>/expense'
-   if path not in sys.path:
-       sys.path.insert(0, path)
+To deploy updates later, run the same command again. It pulls the latest code, migrates the database and reloads the site.
+To get into `/admin`, run this in the console: `cd ~/expense-manager && DEBUG=False SECRET_KEY=$(cat ~/.expense_secret_key) ~/.virtualenvs/expense-venv/bin/python manage.py createsuperuser`
 
-   os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings'
-   os.environ['SECRET_KEY'] = '<paste-your-generated-secret-key>'
-   os.environ['DEBUG'] = 'False'
-   os.environ['ALLOWED_HOSTS'] = '<username>.pythonanywhere.com'
-
-   from django.core.wsgi import get_wsgi_application
-   application = get_wsgi_application()
-   ```
-7. Turn on **Force HTTPS** on the Web tab, click **Reload**, and visit `https://<username>.pythonanywhere.com`.
-
-To deploy updates: `git pull`, `python manage.py migrate`, `python manage.py collectstatic --no-input`, then click **Reload**.
+Note: free accounts must click **Run until 3 months from today** on the Web tab every 3 months, or the site is switched off.
 
 ## Option B: Render + Neon Postgres (free, deploys on git push)
 
