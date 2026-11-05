@@ -45,7 +45,7 @@ python -c "import secrets; print(secrets.token_urlsafe(50))"
 To deploy updates later, run the same command again. It pulls the latest code, migrates the database and reloads the site.
 To get into `/admin`, run this in the console: `cd ~/expense-manager && DEBUG=False SECRET_KEY=$(cat ~/.expense_secret_key) ~/.virtualenvs/expense-venv/bin/python manage.py createsuperuser`
 
-Note: free accounts must click **Run until 3 months from today** on the Web tab every 3 months, or the site is switched off.
+Note: free sites expire after about a month. Log in and click **Run until 1 month from today** on the Web tab before the expiry date shown there, or the site is switched off.
 
 ## Option B: Render + Neon Postgres (free, deploys on git push)
 
