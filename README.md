@@ -1,6 +1,6 @@
-# Expense Manager
+# Spendly
 
-A Django app for tracking balance, income and expenses per day, with user accounts.
+Spendly is a Django app for tracking balance, income and expenses per day, in separate books, with user accounts and a REST API.
 
 ## Run locally
 

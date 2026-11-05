@@ -1,10 +1,14 @@
 {% extends "tracker/base.html" %}
 {% block title %}Settings · {{ book.name }}{% endblock %}
+{% block topbar_left %}
+  {% url 'book_detail' book.pk as back_url %}{% include "tracker/_back.html" with back_label=book.name %}
+  <span class="topbar-title">Settings</span>
+{% endblock %}
 {% block content %}
 <div style="max-width:560px;margin:0 auto">
   <div class="page-head">
     <div>
-      <div class="breadcrumb"><a href="{% url 'book_list' %}">My books</a> / <a href="{% url 'book_detail' book.pk %}">{{ book.name }}</a> / Settings</div>
+      <div class="breadcrumb hide-mobile"><a href="{% url 'book_list' %}">My books</a> / <a href="{% url 'book_detail' book.pk %}">{{ book.name }}</a> / Settings</div>
       <h1>Book settings</h1>
     </div>
   </div>
@@ -13,8 +17,10 @@
       {% csrf_token %}
       {% include "tracker/_field.html" with field=form.name %}
       {% include "tracker/_field.html" with field=form.currency %}
-      <button class="btn" type="submit">Save changes</button>
-      <a class="btn btn-ghost" href="{% url 'book_detail' book.pk %}">Cancel</a>
+      <div class="form-actions">
+        <button class="btn" type="submit">Save changes</button>
+        <a class="btn btn-ghost" href="{% url 'book_detail' book.pk %}">Cancel</a>
+      </div>
     </form>
   </div>
   <div class="card danger-zone">

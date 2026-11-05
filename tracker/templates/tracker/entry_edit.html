@@ -1,19 +1,39 @@
 {% extends "tracker/base.html" %}
 {% block title %}Edit entry{% endblock %}
+{% block topbar_left %}
+  {% include "tracker/_back.html" with back_label=book.name %}
+  <span class="topbar-title">Edit entry</span>
+{% endblock %}
 {% block content %}
 <div style="max-width:480px;margin:0 auto">
   <div class="page-head">
     <div>
-      <div class="breadcrumb"><a href="{% url 'book_list' %}">My books</a> / <a href="{% url 'book_detail' book.pk %}?month={{ t.date|date:'Y-m' }}">{{ book.name }}</a> / Edit</div>
+      <div class="breadcrumb hide-mobile"><a href="{% url 'book_list' %}">My books</a> / <a href="{% url 'book_detail' book.pk %}?month={{ t.date|date:'Y-m' }}">{{ book.name }}</a> / Edit</div>
       <h1>Edit entry</h1>
     </div>
   </div>
   <div class="card">
     <form method="post">
       {% include "tracker/_entry_form.html" %}
-      <button class="btn" type="submit">Save changes</button>
-      <a class="btn btn-ghost" href="{% url 'book_detail' book.pk %}?month={{ t.date|date:'Y-m' }}">Cancel</a>
+      <div class="form-actions">
+        <button class="btn" type="submit">Save changes</button>
+        <a class="btn btn-ghost" href="{{ back_url }}">Cancel</a>
+      </div>
+    </form>
+  </div>
+  <div class="card">
+    <form method="post" action="{% url 'entry_delete' t.pk %}" onsubmit="return confirm('Delete this entry? The book balance will be recalculated.')">
+      {% csrf_token %}<button class="btn btn-danger btn-block" type="submit">🗑 Delete entry</button>
     </form>
   </div>
 </div>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.querySelectorAll('[data-date-offset]').forEach(btn => btn.addEventListener('click', () => {
+    const d = new Date(); d.setDate(d.getDate() + Number(btn.dataset.dateOffset));
+    const pad = n => String(n).padStart(2, '0');
+    document.getElementById('id_date').value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }));
+</script>
 {% endblock %}

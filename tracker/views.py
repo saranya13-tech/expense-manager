@@ -3,6 +3,7 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -107,8 +108,9 @@ def entry_edit(request, pk):
     if request.method == "POST" and form.is_valid():
         form.save()
         messages.success(request, "Entry updated.")
-        return redirect(f"/books/{t.book_id}/?month={t.date:%Y-%m}")
-    return render(request, "tracker/entry_edit.html", {"form": form, "t": t, "book": t.book})
+        return redirect(f"{reverse('book_detail', args=[t.book_id])}?month={t.date:%Y-%m}")
+    back_url = f"{reverse('book_detail', args=[t.book_id])}?month={t.date:%Y-%m}"
+    return render(request, "tracker/entry_edit.html", {"form": form, "t": t, "book": t.book, "back_url": back_url})
 
 
 @login_required

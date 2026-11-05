@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import views
+from . import pwa, views
 
 urlpatterns = [
     path("", views.book_list, name="book_list"),
@@ -11,6 +11,9 @@ urlpatterns = [
     path("entries/<int:pk>/edit/", views.entry_edit, name="entry_edit"),
     path("entries/<int:pk>/delete/", views.entry_delete, name="entry_delete"),
     path("accounts/register/", views.register, name="register"),
+    path("manifest.webmanifest", pwa.manifest, name="pwa_manifest"),
+    path("sw.js", pwa.service_worker, name="pwa_sw"),
+    path("offline/", pwa.offline, name="pwa_offline"),
     path("accounts/login/", auth_views.LoginView.as_view(), name="login"),
     path("accounts/logout/", auth_views.LogoutView.as_view(), name="logout"),
 ]

@@ -2,23 +2,44 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}Expense Manager{% endblock %} · Expense Manager</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Spendly">
+<title>{% block title %}Spendly{% endblock %} · Spendly</title>
 <link rel="stylesheet" href="{% static 'tracker/app.css' %}">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📒</text></svg>">
+<link rel="manifest" href="{% url 'pwa_manifest' %}">
+<link rel="icon" type="image/png" sizes="192x192" href="{% static 'tracker/icon-192.png' %}">
+<link rel="apple-touch-icon" href="{% static 'tracker/icon-180.png' %}">
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
 <header class="topbar">
   <div class="topbar-inner">
-    <a class="brand" href="{% url 'book_list' %}"><span class="brand-mark">₹</span><span class="brand-text">Expense Manager</span></a>
+    <div class="topbar-left">
+      {% block topbar_left %}
+        <a class="brand" href="{% url 'book_list' %}"><span class="brand-mark">₹</span><span class="brand-text">Spendly</span></a>
+      {% endblock %}
+    </div>
     <nav class="nav">
       {% if user.is_authenticated %}
         {% block nav_extra %}{% endblock %}
-        <span class="avatar" title="{{ user.username }}">{{ user.username|first }}</span>
-        <span class="username">{{ user.username }}</span>
-        <form method="post" action="{% url 'logout' %}">
-          {% csrf_token %}<button type="submit" class="btn btn-ghost btn-sm">Log out</button>
-        </form>
+        <details class="menu-wrap usermenu">
+          <summary class="avatar" aria-label="Account menu">{{ user.username|first }}</summary>
+          <div class="menu">
+            <div class="menu-head">Signed in as<br><b>{{ user.username }}</b></div>
+            <a href="{% url 'book_list' %}">📚 All books</a>
+            <button type="button" class="menu-item" id="install-app" hidden>📲 Install app</button>
+            <div class="menu-note" id="ios-install" hidden>
+              <b>📲 Install on iPhone</b><br>Tap <b>Share</b> <span aria-hidden="true">⎋</span> then <b>Add to Home Screen</b>.
+            </div>
+            <hr>
+            <form method="post" action="{% url 'logout' %}">
+              {% csrf_token %}<button type="submit" class="menu-item danger">↩ Log out</button>
+            </form>
+          </div>
+        </details>
       {% else %}
         <a class="btn btn-ghost btn-sm" href="{% url 'login' %}">Log in</a>
         <a class="btn btn-sm" href="{% url 'register' %}">Sign up</a>
@@ -27,8 +48,54 @@
   </div>
 </header>
 <main class="container">
-  {% for m in messages %}<div class="flash {% if m.tags == 'error' %}error{% endif %}">✓ {{ m }}</div>{% endfor %}
+  {% for m in messages %}
+    <div class="flash {% if m.tags == 'error' %}error{% endif %}" role="status">
+      <span>✓ {{ m }}</span><button type="button" class="flash-close" aria-label="Dismiss">✕</button>
+    </div>
+  {% endfor %}
   {% block content %}{% endblock %}
 </main>
+{% block after_main %}{% endblock %}
+<script>
+  // Dropdown menus: close when tapping elsewhere or pressing Escape.
+  document.addEventListener('click', e => document.querySelectorAll('details.menu-wrap[open]').forEach(d => { if (!d.contains(e.target)) d.open = false; }));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('details.menu-wrap[open]').forEach(d => d.open = false); });
+  // Flash messages: tap ✕ to dismiss; fade out on their own after a few seconds.
+  document.querySelectorAll('.flash').forEach(f => {
+    const hide = () => { f.classList.add('hide'); setTimeout(() => f.remove(), 300); };
+    f.querySelector('.flash-close').addEventListener('click', hide);
+    setTimeout(hide, 4500);
+  });
+</script>
+<script>
+  // PWA: register the service worker (offline page + fast static files).
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('{% url "pwa_sw" %}', { scope: '/' }).catch(() => {}));
+  }
+  // "Install app": Chrome/Edge/Android fire beforeinstallprompt; iPhone Safari needs the Share menu instead.
+  (() => {
+    const btn = document.getElementById('install-app');
+    const iosNote = document.getElementById('ios-install');
+    const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    let deferred = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferred = e;
+      if (btn) btn.hidden = false;
+    });
+    btn?.addEventListener('click', async () => {
+      if (!deferred) return;
+      deferred.prompt();
+      await deferred.userChoice;
+      deferred = null;
+      btn.hidden = true;
+    });
+    window.addEventListener('appinstalled', () => { if (btn) btn.hidden = true; });
+    if (iosNote && isIOS && !standalone) iosNote.hidden = false;
+    if (standalone) document.documentElement.classList.add('standalone');
+  })();
+</script>
+{% block scripts %}{% endblock %}
 </body>
 </html>

@@ -141,3 +141,72 @@ class BookTests(TestCase):
         self.client.logout()
         for url in ["/accounts/login/", "/accounts/register/"]:
             self.assertEqual(self.client.get(url).status_code, 200, url)
+
+
+class MobileUiTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user("m", password="pw-12345678")
+        self.client.force_login(self.user)
+        self.book = Book.objects.create(user=self.user, name="Home")
+
+    def test_brand_and_home_screen_support(self):
+        r = self.client.get("/")
+        self.assertContains(r, "<title>My books · Spendly</title>", html=False)
+        self.assertContains(r, 'rel="manifest"')
+        self.assertContains(r, 'rel="apple-touch-icon"')
+        self.assertNotContains(r, 'class="back"')  # home page has no back button
+
+    def test_book_page_has_back_to_books_and_add_entry_sheet(self):
+        r = self.client.get(f"/books/{self.book.pk}/")
+        self.assertContains(r, '<a class="back" href="/"', html=False)
+        self.assertContains(r, 'id="entry-sheet"')
+        self.assertContains(r, "data-open-sheet")
+        self.assertContains(r, 'data-date-offset="-1"')
+
+    def test_invalid_entry_reopens_the_sheet(self):
+        r = self.client.post(f"/books/{self.book.pk}/", {"kind": "EXPENSE", "amount": "0", "date": "2026-11-01"})
+        self.assertContains(r, 'class="has-fab sheet-open"', html=False)
+
+    def test_settings_and_entry_pages_go_back_to_the_book(self):
+        r = self.client.get(f"/books/{self.book.pk}/edit/")
+        self.assertContains(r, f'<a class="back" href="/books/{self.book.pk}/"', html=False)
+        t = Transaction.objects.create(book=self.book, kind="EXPENSE", amount=5, date="2026-10-03")
+        r = self.client.get(f"/entries/{t.pk}/edit/")
+        self.assertContains(r, f'<a class="back" href="/books/{self.book.pk}/?month=2026-10"', html=False)
+        self.assertContains(r, "Delete entry")
+
+
+class PwaTests(TestCase):
+    def test_manifest(self):
+        r = self.client.get("/manifest.webmanifest")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r["Content-Type"], "application/manifest+json")
+        m = r.json()
+        self.assertEqual((m["name"], m["short_name"], m["display"], m["start_url"]), ("Spendly", "Spendly", "standalone", "/"))
+        sizes = {i["sizes"] for i in m["icons"]}
+        self.assertEqual(sizes, {"192x192", "512x512"})
+        self.assertIn("maskable", {i["purpose"] for i in m["icons"]})
+        for icon in m["icons"]:
+            self.assertTrue(icon["src"].startswith("/static/tracker/icon-"))
+
+    def test_service_worker_served_from_root(self):
+        r = self.client.get("/sw.js")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r["Content-Type"], "application/javascript")
+        self.assertEqual(r["Service-Worker-Allowed"], "/")
+        self.assertEqual(r["Cache-Control"], "no-cache")
+        body = r.content.decode()
+        self.assertIn("const OFFLINE_URL = '/offline/'", body)
+        self.assertIn("req.mode === 'navigate'", body)
+
+    def test_offline_page_is_public(self):
+        r = self.client.get("/offline/")
+        self.assertContains(r, "You're offline")
+
+    def test_pages_link_manifest_and_register_worker(self):
+        r = self.client.get("/accounts/login/")
+        self.assertContains(r, '<link rel="manifest" href="/manifest.webmanifest">', html=False)
+        self.assertContains(r, "serviceWorker.register('/sw.js'", html=False)
+        user = User.objects.create_user("p", password="pw-12345678")
+        self.client.force_login(user)
+        self.assertContains(self.client.get("/"), 'id="install-app"')

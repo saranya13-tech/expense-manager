@@ -142,7 +142,7 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {'auth': os.environ.get('AUTH_THROTTLE_RATE', '20/min')},
 }
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Expense Manager API',
+    'TITLE': 'Spendly API',
     'DESCRIPTION': 'Books, balances, income and expenses. Authenticate with header `Authorization: Token <token>`.',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,

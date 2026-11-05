@@ -12,4 +12,12 @@
   {{ form.amount.errors }}
 </div>
 {% include "tracker/_field.html" with field=form.remark %}
-{% include "tracker/_field.html" with field=form.date %}
+<div class="field">
+  <label for="{{ form.date.id_for_label }}">Date</label>
+  {{ form.date }}
+  <div class="chips">
+    <button type="button" class="chip" data-date-offset="0">Today</button>
+    <button type="button" class="chip" data-date-offset="-1">Yesterday</button>
+  </div>
+  {{ form.date.errors }}
+</div>

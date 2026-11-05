@@ -1,24 +1,29 @@
 {% extends "tracker/base.html" %}
 {% load money %}
 {% block title %}{{ book.name }}{% endblock %}
+{% block body_class %}has-fab{% if form.errors %} sheet-open{% endif %}{% endblock %}
+{% block topbar_left %}
+  {% url 'book_list' as back_url %}{% include "tracker/_back.html" with back_label="Books" %}
+  <span class="topbar-title">{{ book.name }}</span>
+{% endblock %}
 {% block nav_extra %}
-<details class="switcher">
-  <summary class="btn btn-ghost btn-sm">📒 <span class="switch-text">Switch book</span> ▾</summary>
+<details class="menu-wrap switcher">
+  <summary class="btn btn-ghost btn-sm" aria-label="Switch book">📒 <span class="switch-text">Switch book</span> ▾</summary>
   <div class="menu">
     {% for b in books %}
       <a href="{% url 'book_detail' b.pk %}" class="{% if b.pk == book.pk %}active{% endif %}"><span class="book-icon">{{ b.name|first }}</span>{{ b.name }}</a>
     {% endfor %}
-    <hr><a href="{% url 'book_list' %}">All books</a>
+    <hr><a href="{% url 'book_list' %}">📚 All books</a>
   </div>
 </details>
 {% endblock %}
 {% block content %}
 <div class="page-head">
   <div>
-    <div class="breadcrumb"><a href="{% url 'book_list' %}">My books</a> / {{ book.name }}</div>
+    <div class="breadcrumb hide-mobile"><a href="{% url 'book_list' %}">My books</a> / {{ book.name }}</div>
     <h1>{{ book.name }}</h1>
   </div>
-  <a class="btn btn-ghost btn-sm" href="{% url 'book_edit' book.pk %}">⚙ Book settings</a>
+  <a class="btn btn-ghost btn-sm" href="{% url 'book_edit' book.pk %}">⚙ <span class="hide-mobile">Book settings</span><span class="show-mobile">Settings</span></a>
 </div>
 
 <div class="stats">
@@ -32,25 +37,30 @@
 </div>
 
 <div class="grid-2">
-  <div class="card sticky">
-    <div class="card-head"><h2>Add entry</h2></div>
+  <div class="sheet-backdrop" data-close-sheet></div>
+  <div class="card sticky sheet" id="entry-sheet" role="dialog" aria-labelledby="sheet-title">
+    <div class="sheet-grabber"></div>
+    <div class="card-head">
+      <h2 id="sheet-title">Add entry</h2>
+      <button type="button" class="icon-btn sheet-close" data-close-sheet aria-label="Close">✕</button>
+    </div>
     <form method="post" autocomplete="off">
       {% include "tracker/_entry_form.html" %}
       <button class="btn btn-block" type="submit">Add entry</button>
     </form>
   </div>
 
-  <div class="card">
+  <div class="card ledger">
     <div class="card-head" style="margin-bottom:12px">
       <div class="month-nav">
-        <a class="icon-btn" href="?month={{ prev_month }}" title="Previous month">‹</a>
+        <a class="icon-btn" href="?month={{ prev_month }}" aria-label="Previous month">‹</a>
         <span class="label">{{ month|date:"F Y" }}</span>
-        <a class="icon-btn" href="?month={{ next_month }}" title="Next month">›</a>
+        <a class="icon-btn" href="?month={{ next_month }}" aria-label="Next month">›</a>
       </div>
-      {% if not is_current_month %}<a class="btn btn-ghost btn-sm" href="?">Today</a>{% endif %}
+      {% if not is_current_month %}<a class="btn btn-ghost btn-sm" href="?">This month</a>{% endif %}
       <form class="search" method="get">
         <input type="hidden" name="month" value="{{ month_value }}">
-        <input type="search" name="q" value="{{ query }}" placeholder="Search remarks…">
+        <input type="search" name="q" value="{{ query }}" placeholder="Search remarks…" enterkeyhint="search">
       </form>
     </div>
 
@@ -73,19 +83,21 @@
       </div>
       {% for t in day.items %}
       <div class="entry">
-        <span class="entry-icon {{ t.kind }}">{% if t.kind == 'EXPENSE' %}↓{% elif t.kind == 'INCOME' %}↑{% else %}+{% endif %}</span>
-        <div class="entry-main">
-          <div class="entry-title">{{ t.remark|default:t.get_kind_display }}</div>
-          <div class="entry-sub"><span class="pill {{ t.kind }}">{{ t.get_kind_display }}</span></div>
-        </div>
-        <div class="entry-amount">
-          <div class="amt num {% if t.kind == 'EXPENSE' %}red{% else %}green{% endif %}">{% if t.kind == 'EXPENSE' %}-{% else %}+{% endif %}{{ t.amount|money:book.currency }}</div>
-          <div class="after num">Bal {{ t.running|money:book.currency }}</div>
-        </div>
+        <a class="entry-link" href="{% url 'entry_edit' t.pk %}" aria-label="Edit {{ t.remark|default:t.get_kind_display }}">
+          <span class="entry-icon {{ t.kind }}">{% if t.kind == 'EXPENSE' %}↓{% elif t.kind == 'INCOME' %}↑{% else %}+{% endif %}</span>
+          <span class="entry-main">
+            <span class="entry-title">{{ t.remark|default:t.get_kind_display }}</span>
+            <span class="entry-sub"><span class="pill {{ t.kind }}">{{ t.get_kind_display }}</span></span>
+          </span>
+          <span class="entry-amount">
+            <span class="amt num {% if t.kind == 'EXPENSE' %}red{% else %}green{% endif %}">{% if t.kind == 'EXPENSE' %}-{% else %}+{% endif %}{{ t.amount|money:book.currency }}</span>
+            <span class="after num">Bal {{ t.running|money:book.currency }}</span>
+          </span>
+        </a>
         <div class="entry-actions">
-          <a class="icon-btn" href="{% url 'entry_edit' t.pk %}" title="Edit">✎</a>
+          <a class="icon-btn" href="{% url 'entry_edit' t.pk %}" title="Edit" aria-label="Edit">✎</a>
           <form method="post" action="{% url 'entry_delete' t.pk %}" onsubmit="return confirm('Delete this entry?')">
-            {% csrf_token %}<button class="icon-btn danger" type="submit" title="Delete">🗑</button>
+            {% csrf_token %}<button class="icon-btn danger" type="submit" title="Delete" aria-label="Delete">🗑</button>
           </form>
         </div>
       </div>
@@ -98,14 +110,32 @@
       {% elif has_entries %}
         <div class="big">🗓️</div><h3>Nothing in {{ month|date:"F Y" }}</h3><p>Use ‹ › to see other months, or add an entry.</p>
       {% else %}
-        <div class="big">📒</div><h3>This book is empty</h3><p>Start by choosing <b>Add Balance</b> and entering the money you have now.</p>
+        <div class="big">📒</div><h3>This book is empty</h3><p>Tap <b>Add entry</b> and choose <b>Add Balance</b> to enter the money you have now.</p>
       {% endif %}
     </div>
     {% endfor %}
   </div>
 </div>
+{% endblock %}
+{% block after_main %}
+<button type="button" class="fab" data-open-sheet aria-controls="entry-sheet">＋ Add entry</button>
+{% endblock %}
+{% block scripts %}
 <script>
-  // Close the book switcher when clicking elsewhere.
-  document.addEventListener('click', e => document.querySelectorAll('details.switcher[open]').forEach(d => { if (!d.contains(e.target)) d.open = false; }));
+  // Phones: the add-entry form is a bottom sheet opened by the floating button.
+  const body = document.body;
+  const openSheet = () => { body.classList.add('sheet-open'); setTimeout(() => document.getElementById('id_amount')?.focus(), 250); };
+  const closeSheet = () => body.classList.remove('sheet-open');
+  document.querySelectorAll('[data-open-sheet]').forEach(b => b.addEventListener('click', openSheet));
+  document.querySelectorAll('[data-close-sheet]').forEach(b => b.addEventListener('click', closeSheet));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+</script>
+<script>
+  // Quick date buttons (Today / Yesterday).
+  document.querySelectorAll('[data-date-offset]').forEach(btn => btn.addEventListener('click', () => {
+    const d = new Date(); d.setDate(d.getDate() + Number(btn.dataset.dateOffset));
+    const pad = n => String(n).padStart(2, '0');
+    document.getElementById('id_date').value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }));
 </script>
 {% endblock %}

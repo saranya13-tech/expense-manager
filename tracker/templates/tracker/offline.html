@@ -1,0 +1,21 @@
+{% load static %}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>Offline · {{ app_name }}</title>
+<link rel="stylesheet" href="{% static 'tracker/app.css' %}">
+</head>
+<body>
+<main class="container">
+  <div class="card offline-card">
+    <img src="{% static 'tracker/icon-180.png' %}" alt="" width="72" height="72" class="offline-icon">
+    <h1>You're offline</h1>
+    <p class="muted">{{ app_name }} needs an internet connection to load your books. Check your Wi-Fi or mobile data and try again.</p>
+    <button class="btn btn-block" type="button" onclick="location.reload()">Try again</button>
+  </div>
+</main>
+<script>window.addEventListener('online', () => location.reload());</script>
+</body>
+</html>
